@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { theme } from '../theme/theme';
 import { useSOSStore } from '../store/useSOSStore';
 import * as Haptics from 'expo-haptics';
@@ -9,8 +10,9 @@ export const FloatingSOSButton = () => {
   const router = useRouter();
   const activateSOS = useSOSStore(state => state.activateSOS);
 
-  const handlePress = () => {
+  const handlePress = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
     Alert.alert(
       "Emergency SOS",
       "Are you sure you want to activate SOS? This will alert your emergency contacts with your location.",
@@ -19,9 +21,26 @@ export const FloatingSOSButton = () => {
         {
           text: "YES, ACTIVATE",
           style: "destructive",
-          onPress: () => {
+          onPress: async () => {
             activateSOS();
-            Alert.alert("SOS Activated", "Help is on the way. Your contacts have been notified.");
+
+            try {
+              let { status } = await Location.requestForegroundPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission to access location was denied');
+                return;
+              }
+
+              let location = await Location.getCurrentPositionAsync({});
+              const { latitude, longitude } = location.coords;
+              Alert.alert(
+                "SOS Activated",
+                `Help is on the way. Your contacts have been notified.\nLocation: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+              );
+            } catch (error) {
+              console.error(error);
+              Alert.alert("SOS Activated", "Help is on the way. (Location could not be retrieved)");
+            }
           }
         }
       ]
