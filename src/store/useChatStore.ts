@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { ai } from '../services/ai';
 
 interface Message {
   id: string;
@@ -38,21 +39,53 @@ export const useChatStore = create<ChatState>((set) => ({
     }));
 
     try {
-      // Call API
-      const response = await api.chat.sendMessage(chatId, text);
+      // Check if this is the AI chat
+      if (chatId === 'ai-assistant') {
+        // 1. Confirm the user's message was "sent" (resolve pending)
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [chatId]: state.chats[chatId].map(msg =>
+              msg.id === tempId ? { ...msg, pending: false } : msg
+            ),
+          }
+        }));
 
-      // Update with real message from server
-      set((state) => ({
-        chats: {
-          ...state.chats,
-          [chatId]: state.chats[chatId].map(msg =>
-            msg.id === tempId ? { ...response, read: false, pending: false } : msg
-          ),
-        }
-      }));
+        // 2. Get AI Response
+        const aiResponseText = await ai.sendMessage(text);
+
+        const aiMessage: Message = {
+          id: Math.random().toString(36).substr(2, 9),
+          senderId: 'ai',
+          text: aiResponseText,
+          timestamp: Date.now(),
+          read: true,
+        };
+
+        // 3. Add AI message
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [chatId]: [...(state.chats[chatId] || []), aiMessage]
+          }
+        }));
+
+      } else {
+        // Standard P2P Chat
+        const response = await api.chat.sendMessage(chatId, text);
+
+        // Update with real message from server
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [chatId]: state.chats[chatId].map(msg =>
+              msg.id === tempId ? { ...response, read: false, pending: false } : msg
+            ),
+          }
+        }));
+      }
     } catch (error) {
       console.error("Failed to send message", error);
-      // Could handle error state here (e.g. mark as failed)
     }
   },
   markAsRead: (chatId) => set((state) => {

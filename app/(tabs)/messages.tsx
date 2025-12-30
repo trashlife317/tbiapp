@@ -8,6 +8,7 @@ import { useChatStore } from '../../src/store/useChatStore';
 
 // Mock chat list since the store organizes by chat ID
 const MOCK_CHATS = [
+  { id: 'ai-assistant', name: 'AI Companion', lastMessage: 'I am here to listen. 💛', time: Date.now(), unread: 0, isAi: true },
   { id: '1', name: 'Sarah', lastMessage: 'Hey! How are you feeling today?', time: Date.now() - 300000, unread: 2 },
   { id: '2', name: 'Dr. Smith', lastMessage: 'Remember your appointment tomorrow.', time: Date.now() - 86400000, unread: 0 },
 ];
@@ -28,9 +29,12 @@ export default function MessagesScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => handlePress(item.id)}>
-            <Card style={styles.card}>
+            <Card style={[styles.card, item.isAi && styles.aiCard]}>
               <View style={styles.row}>
-                <Avatar size={50} />
+                <Avatar
+                  size={50}
+                  uri={item.isAi ? 'https://img.freepik.com/premium-vector/cute-robot-mascot-logo-cartoon-character-illustration_10308-82.jpg' : undefined}
+                />
                 <View style={styles.content}>
                   <View style={styles.header}>
                     <Text style={styles.name}>{item.name}</Text>
@@ -74,6 +78,11 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
+  },
+  aiCard: {
+    borderWidth: 1,
+    borderColor: theme.colors.gold,
+    backgroundColor: '#FFFDE7',
   },
   row: {
     flexDirection: 'row',
